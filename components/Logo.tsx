@@ -11,7 +11,7 @@ export function Logo({ className, ...props }: Props) {
       aria-label="Balancer Simple Swap"
       viewBox="0 0 361 125"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn(className, 'w-32 select-none pointer-events-none')}
+      className={cn(className, 'w-32 h-auto select-none pointer-events-none')}
       {...props}
     >
       <path

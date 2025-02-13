@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Balancer SWAP',
+  title: 'BSS ⇄ Balancer Simple SWAP',
   description: 'Simple SWAP app using balancer services to get the best rates',
   icons: {
     icon: [
