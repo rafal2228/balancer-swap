@@ -10,9 +10,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PropsWithChildren } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { arbitrum } from 'wagmi/chains';
+import { useTheme } from 'next-themes';
 
 import '@rainbow-me/rainbowkit/styles.css';
-import { useTheme } from 'next-themes';
 
 const config = getDefaultConfig({
   appName: 'Balancer SWAP',
