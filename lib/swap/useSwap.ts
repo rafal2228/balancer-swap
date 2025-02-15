@@ -102,7 +102,10 @@ export const useSwap = ({
     abi: erc20Abi,
     address: tokenIn?.address,
     functionName: 'balanceOf',
-    args: userAddress ? [userAddress] : undefined,
+    args: typeof userAddress === 'string' ? [userAddress] : undefined,
+    query: {
+      enabled: typeof userAddress === 'string',
+    },
   });
 
   const vaultAddress = getVaultAddress(chainId, swap.data?.protocolVersion);
