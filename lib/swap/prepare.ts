@@ -6,7 +6,7 @@ import {
   Token,
   TokenAmount,
 } from '@balancer/sdk';
-import { Address } from 'viem';
+import { Address, formatUnits } from 'viem';
 import { SupportedChainId, supportedRPCs, SupportedToken } from '../tokens';
 
 export const prepareSwap = async (config: {
@@ -40,8 +40,21 @@ export const prepareSwap = async (config: {
     config.chainId,
   );
 
-  // Errors out with high precision numbers
-  // internal bug with swapAmount.toSignificant(swapAmount.token.decimals)
+  // Internal bug with swapAmount.toSignificant(swapAmount.token.decimals)
+  // To be removed once https://github.com/balancer/b-sdk/issues/596 gets resolved
+  swapAmount.toSignificant = (decimals: number) => {
+    const [integer, fraction] = formatUnits(
+      swapAmount.amount,
+      swapAmount.token.decimals,
+    ).split('.');
+
+    if (fraction.length > 0) {
+      return `${integer}.${fraction.slice(0, decimals)}`;
+    }
+
+    return integer;
+  };
+
   const paths = await balancerApi.sorSwapPaths.fetchSorSwapPaths({
     chainId: config.chainId,
     tokenIn: tokenIn.address,
