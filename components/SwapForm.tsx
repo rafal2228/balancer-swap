@@ -1,4 +1,7 @@
-import { supportedTokens } from '@/lib/tokens';
+'use client';
+import { formatSlippage, parseSlippage } from '@/lib/swap/slippage';
+import { useSwap } from '@/lib/swap/useSwap';
+import { SupportedChainId, supportedTokens } from '@/lib/tokens';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader } from '@/ui/card';
 import { Input } from '@/ui/input';
@@ -11,23 +14,23 @@ import {
   SelectValue,
 } from '@/ui/select';
 import { cn } from '@/utils';
+import { SwapKind } from '@balancer/sdk';
 import { Label } from '@radix-ui/react-label';
 import { RefreshCcwDot, Settings } from 'lucide-react';
 import Image from 'next/image';
 import { ComponentProps } from 'react';
-import { Address, formatUnits } from 'viem';
+import { Address, parseUnits } from 'viem';
 import { arbitrum } from 'viem/chains';
+import { useAccount } from 'wagmi';
 
 type Props = Omit<ComponentProps<'div'>, 'children'>;
-
-const slippageDecimals = 6;
 
 const TokenSelect = ({
   value,
   chainId,
 }: {
   value: Address;
-  chainId: number;
+  chainId: SupportedChainId;
 }) => {
   const tokens = supportedTokens[chainId];
 
@@ -57,7 +60,7 @@ const TokenSelect = ({
 };
 
 const SwapConfiguration = (props: { slippage: bigint }) => {
-  const slippage = formatUnits(props.slippage, slippageDecimals);
+  const slippage = formatSlippage(props.slippage);
 
   return (
     <Popover>
@@ -103,6 +106,17 @@ const SwapConfiguration = (props: { slippage: bigint }) => {
 };
 
 export function SwapForm({ className, ...props }: Props) {
+  const account = useAccount();
+  const swap = useSwap({
+    slippage: parseSlippage('0.5'),
+    amount: parseUnits('0.001', supportedTokens[arbitrum.id][0].decimals),
+    chainId: arbitrum.id,
+    tokenIn: supportedTokens[arbitrum.id][0],
+    tokenOut: supportedTokens[arbitrum.id][1],
+    swapKind: SwapKind.GivenIn,
+    userAddress: account.address,
+  });
+
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
@@ -113,7 +127,7 @@ export function SwapForm({ className, ...props }: Props) {
               <RefreshCcwDot />
             </Button>
 
-            <SwapConfiguration slippage={500000n} />
+            <SwapConfiguration slippage={parseSlippage('0.5')} />
           </div>
         </CardHeader>
 
