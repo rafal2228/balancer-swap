@@ -11,6 +11,7 @@ import { PropsWithChildren } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { arbitrum } from 'wagmi/chains';
 import { useTheme } from 'next-themes';
+import { hashFn } from 'wagmi/query';
 
 import '@rainbow-me/rainbowkit/styles.css';
 
@@ -21,7 +22,13 @@ const config = getDefaultConfig({
   ssr: true,
 });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryKeyHashFn: hashFn,
+    },
+  },
+});
 
 export function WalletProvider({ children }: PropsWithChildren) {
   const theme = useTheme();

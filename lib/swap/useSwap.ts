@@ -88,7 +88,7 @@ export const useSwap = ({
 
   const swap = useQuery({
     enabled: swapEnabled,
-    queryKey: ['useSwap', 'swap'],
+    queryKey: ['useSwap', 'swap', swapKind, chainId, tokenIn, tokenOut, amount],
     queryFn: () => {
       invariant(amount, 'Amount is required');
       invariant(chainId, 'ChainId is required');
@@ -106,6 +106,15 @@ export const useSwap = ({
     },
   });
 
+  const usedToken = swapKind === SwapKind.GivenIn ? tokenIn : tokenOut;
+
+  const balance = useReadContract({
+    abi: erc20Abi,
+    address: usedToken?.address,
+    functionName: 'balanceOf',
+    args: userAddress ? [userAddress] : undefined,
+  });
+
   const vaultAddress = getVaultAddress(chainId, swap.data?.protocolVersion);
 
   const allowanceEnabled =
@@ -115,7 +124,7 @@ export const useSwap = ({
 
   const allowance = useReadContract({
     abi: erc20Abi,
-    address: tokenIn?.address,
+    address: usedToken?.address,
     functionName: 'allowance',
     args: userAddress && vaultAddress ? [userAddress, vaultAddress] : undefined,
   });
@@ -138,12 +147,12 @@ export const useSwap = ({
       return;
     }
 
-    invariant(tokenIn, 'TokenIn is required');
+    invariant(usedToken, 'Used token is required');
     invariant(vaultAddress, 'VaultAddress is required');
 
     approval.writeContract({
       abi: erc20Abi,
-      address: tokenIn.address,
+      address: usedToken.address,
       functionName: 'approve',
       args: [vaultAddress, MAX_BIGINT],
     });
@@ -152,13 +161,22 @@ export const useSwap = ({
   const swapCallEnabled =
     swapEnabled &&
     swap.status === 'success' &&
+    balance.status === 'success' &&
+    balance.data >= amount &&
     allowance.status === 'success' &&
     !requiresApproval &&
     isValidSlippage(slippage);
 
   const swapCall = useQuery({
     enabled: swapCallEnabled,
-    queryKey: ['useSwap', 'swapCall'],
+    queryKey: [
+      'useSwap',
+      'swapCall',
+      userAddress,
+      slippage,
+      chainId,
+      swap.data,
+    ],
     queryFn: () => {
       invariant(userAddress, 'UserAddress is required');
       invariant(slippage, 'Slippage is required');
@@ -186,23 +204,27 @@ export const useSwap = ({
     },
   });
 
-  const write = useSendTransaction();
+  const sendTransaction = useSendTransaction();
 
   const handleSwap = async () => {
     if (!prepareTransactionEnabled || prepareTransaction.status !== 'success') {
       return;
     }
 
-    write.sendTransaction(prepareTransaction.data);
+    sendTransaction.sendTransaction(prepareTransaction.data);
   };
 
   return {
     allowance,
     approval,
+    balance,
     prepareTransaction,
+    prepareTransactionEnabled,
     requiresApproval,
     swap,
+    swapEnabled,
     swapCall,
+    sendTransaction,
     handleApprove,
     handleSwap,
   };

@@ -10,10 +10,17 @@ import { createConfig, http, WagmiProvider } from 'wagmi';
 import { connect, disconnect } from 'wagmi/actions';
 import { arbitrum } from 'wagmi/chains';
 import { mock } from 'wagmi/connectors';
+import { hashFn } from 'wagmi/query';
 
 export * from '@testing-library/react';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryKeyHashFn: hashFn,
+    },
+  },
+});
 
 export const defaultAccount =
   '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' as const;

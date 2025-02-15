@@ -40,6 +40,8 @@ export const prepareSwap = async (config: {
     config.chainId,
   );
 
+  // Errors out with high precision numbers
+  // internal bug with swapAmount.toSignificant(swapAmount.token.decimals)
   const paths = await balancerApi.sorSwapPaths.fetchSorSwapPaths({
     chainId: config.chainId,
     tokenIn: tokenIn.address,
