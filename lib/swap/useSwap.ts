@@ -1,10 +1,4 @@
-import {
-  MAX_UINT256,
-  Slippage,
-  SwapKind,
-  VAULT,
-  VAULT_V3,
-} from '@balancer/sdk';
+import { MAX_UINT256, SwapKind, VAULT, VAULT_V3 } from '@balancer/sdk';
 import { useQuery } from '@tanstack/react-query';
 import invariant from 'tiny-invariant';
 import { Address, erc20Abi } from 'viem';
@@ -16,6 +10,7 @@ import {
 } from 'wagmi';
 import { SupportedChainId, SupportedToken, supportedTokens } from '../tokens';
 import { prepareSwap, prepareSwapCall } from './prepare';
+import { isValidSlippage } from './slippage';
 
 type Props = {
   userAddress: Address | undefined;
@@ -26,11 +21,6 @@ type Props = {
   tokenIn: SupportedToken | undefined;
   tokenOut: SupportedToken | undefined;
 };
-
-const isValidSlippage = (slippage: bigint | undefined): slippage is bigint =>
-  typeof slippage === 'bigint' &&
-  0n < slippage &&
-  Slippage.fromPercentage('50').amount >= slippage;
 
 const isValidTokens = (
   props: Pick<Props, 'chainId' | 'tokenIn' | 'tokenOut'>,
@@ -106,11 +96,11 @@ export const useSwap = ({
     },
   });
 
-  const usedToken = swapKind === SwapKind.GivenIn ? tokenIn : tokenOut;
+  const tokenInAmount = swap.data?.inputAmount.amount;
 
   const balance = useReadContract({
     abi: erc20Abi,
-    address: usedToken?.address,
+    address: tokenIn?.address,
     functionName: 'balanceOf',
     args: userAddress ? [userAddress] : undefined,
   });
@@ -124,15 +114,19 @@ export const useSwap = ({
 
   const allowance = useReadContract({
     abi: erc20Abi,
-    address: usedToken?.address,
+    address: tokenIn?.address,
     functionName: 'allowance',
-    args: userAddress && vaultAddress ? [userAddress, vaultAddress] : undefined,
+    args: allowanceEnabled ? [userAddress, vaultAddress] : undefined,
+    query: {
+      enabled: allowanceEnabled,
+    },
   });
 
   const requiresApproval =
     allowanceEnabled &&
+    isValidAmount(tokenInAmount) &&
     allowance.status === 'success' &&
-    allowance.data < amount;
+    allowance.data < tokenInAmount;
 
   const approval = useWriteContract({
     mutation: {
@@ -147,12 +141,12 @@ export const useSwap = ({
       return;
     }
 
-    invariant(usedToken, 'Used token is required');
+    invariant(tokenIn, 'TokenIn is required');
     invariant(vaultAddress, 'VaultAddress is required');
 
     approval.writeContract({
       abi: erc20Abi,
-      address: usedToken.address,
+      address: tokenIn.address,
       functionName: 'approve',
       args: [vaultAddress, MAX_BIGINT],
     });
@@ -215,6 +209,7 @@ export const useSwap = ({
   };
 
   return {
+    tokenInAmount,
     allowance,
     approval,
     balance,

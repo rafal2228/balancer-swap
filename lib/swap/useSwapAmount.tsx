@@ -14,7 +14,7 @@ export const useSwapAmount = ({ formState }: Props) => {
 
     try {
       return parseUnits(formState.amount, formState.tokenIn.decimals);
-    } catch (error) {
+    } catch {
       return 0n;
     }
   }
@@ -25,7 +25,7 @@ export const useSwapAmount = ({ formState }: Props) => {
 
   try {
     return parseUnits(formState.amount, formState.tokenOut.decimals);
-  } catch (error) {
+  } catch {
     return 0n;
   }
 };

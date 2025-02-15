@@ -1,10 +1,15 @@
 'use client';
-import { parseSlippage } from '@/lib/swap/slippage';
+import {
+  isValidSlippage,
+  parseSlippage,
+  SLIPPAGE_REGEX,
+} from '@/lib/swap/slippage';
 import { useSwap } from '@/lib/swap/useSwap';
 import { useSwapAmount } from '@/lib/swap/useSwapAmount';
 import { useSwapForm } from '@/lib/swap/useSwapForm';
 import { useTokenAmount } from '@/lib/swap/useTokenAmount';
 import { SupportedChainId, supportedTokens } from '@/lib/tokens';
+import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader } from '@/ui/card';
 import { Input } from '@/ui/input';
@@ -19,12 +24,18 @@ import {
 import { cn } from '@/utils';
 import { SwapKind } from '@balancer/sdk';
 import { Label } from '@radix-ui/react-label';
-import { RefreshCcwDot, Settings } from 'lucide-react';
+import {
+  AlertCircle,
+  LoaderCircle,
+  RefreshCcwDot,
+  Settings,
+} from 'lucide-react';
 import Image from 'next/image';
 import { ComponentProps } from 'react';
-import { Address, formatUnits, parseUnits } from 'viem';
+import { Address } from 'viem';
 import { arbitrum } from 'viem/chains';
 import { useAccount } from 'wagmi';
+import { TokenBalance } from './TokenBalance';
 
 type Props = Omit<ComponentProps<'div'>, 'children'>;
 
@@ -41,7 +52,7 @@ const TokenSelect = ({
 
   return (
     <Select value={value ?? ''} onValueChange={onValueChange}>
-      <SelectTrigger className="w-[220px]">
+      <SelectTrigger className="w-[160px]">
         <SelectValue placeholder="Select token" />
       </SelectTrigger>
 
@@ -61,6 +72,103 @@ const TokenSelect = ({
         ))}
       </SelectContent>
     </Select>
+  );
+};
+
+const TokenField = ({
+  swapAmount,
+  formState,
+  swap,
+  tokenType,
+  dispatch,
+}: {
+  swapAmount: bigint;
+  tokenType: 'in' | 'out';
+  swap: ReturnType<typeof useSwap>;
+  formState: ReturnType<typeof useSwapForm>[0];
+  dispatch: ReturnType<typeof useSwapForm>[1];
+}) => {
+  const amount = useTokenAmount({
+    formState,
+    swap: swap.swap.data,
+    tokenType,
+  });
+
+  const token = tokenType === 'in' ? formState.tokenIn : formState.tokenOut;
+
+  const isLoading = (() => {
+    if (
+      swapAmount > 0n &&
+      formState.swapKind === SwapKind.GivenOut &&
+      tokenType === 'in'
+    ) {
+      return swap.swap.status === 'pending';
+    }
+
+    if (
+      swapAmount > 0n &&
+      formState.swapKind === SwapKind.GivenIn &&
+      tokenType === 'out'
+    ) {
+      return swap.swap.status === 'pending';
+    }
+
+    return false;
+  })();
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={tokenType === 'in' ? 'tokenIn' : 'tokenOut'}>
+        {tokenType === 'in' ? 'Sell' : 'Buy'}:
+      </Label>
+
+      <div className="flex flex-row gap-2">
+        <div className="grow relative">
+          <Input
+            className="w-full"
+            id={tokenType === 'in' ? 'tokenIn' : 'tokenOut'}
+            type="text"
+            required
+            disabled={isLoading}
+            value={amount}
+            onChange={(e) => {
+              dispatch({
+                type:
+                  tokenType === 'in'
+                    ? 'ChangeTokenInAmount'
+                    : 'ChangeTokenOutAmount',
+                payload: { amount: e.target.value },
+              });
+            }}
+          />
+
+          {isLoading && (
+            <div className="absolute right-2 top-0 bottom-0 flex items-center text-muted-foreground animate-spin">
+              <LoaderCircle />
+            </div>
+          )}
+        </div>
+
+        <div className="flex-initial">
+          <TokenSelect
+            value={token?.address}
+            chainId={formState.chainId}
+            onValueChange={(address) =>
+              dispatch({
+                type: tokenType === 'in' ? 'ChangeTokenIn' : 'ChangeTokenOut',
+                payload: { address },
+              })
+            }
+          />
+        </div>
+      </div>
+
+      {token && (
+        <div className="flex flex-row justify-end text-sm text-muted-foreground">
+          <TokenBalance token={token} />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -93,7 +201,11 @@ const SwapConfiguration = ({
               id="slippage"
               className="col-span-2 h-8"
               value={slippage}
-              onChange={(e) => onSlippageChange(e.target.value)}
+              onChange={(e) => {
+                if (SLIPPAGE_REGEX.test(e.target.value)) {
+                  onSlippageChange(e.target.value.trim());
+                }
+              }}
             />
 
             <div className="flex gap-2">
@@ -144,19 +256,15 @@ export function SwapForm({ className, ...props }: Props) {
     userAddress: account.address,
   });
 
-  const tokenInAmount = useTokenAmount({
-    formState,
-    swap: swap.swap.data,
-    tokenType: 'in',
-  });
-
-  const tokenOutAmount = useTokenAmount({
-    formState,
-    swap: swap.swap.data,
-    tokenType: 'out',
-  });
-
   const renderSubmit = () => {
+    if (!isValidSlippage(parsedSlippage)) {
+      return (
+        <Button className="w-full" disabled>
+          Incorrect slippage
+        </Button>
+      );
+    }
+
     if (!account.isConnected) {
       return (
         <Button className="w-full" disabled>
@@ -173,7 +281,11 @@ export function SwapForm({ className, ...props }: Props) {
       );
     }
 
-    if (swap.balance.data && swapAmount && swapAmount > swap.balance.data) {
+    if (
+      swap.balance.status === 'success' &&
+      swap.tokenInAmount &&
+      swap.tokenInAmount > swap.balance.data
+    ) {
       return (
         <Button className="w-full" disabled>
           Insufficient balance
@@ -185,7 +297,8 @@ export function SwapForm({ className, ...props }: Props) {
       if (swap.approval.status === 'pending') {
         return (
           <Button className="w-full" disabled>
-            Approving token...
+            Approving token
+            <LoaderCircle className="animate-spin" />
           </Button>
         );
       }
@@ -197,10 +310,15 @@ export function SwapForm({ className, ...props }: Props) {
       );
     }
 
+    if (swapAmount === 0n) {
+      return <Button className="w-full">Swap</Button>;
+    }
+
     if (swap.swap.status === 'pending') {
       return (
         <Button className="w-full" disabled>
-          Estimating swap...
+          Estimating swap
+          <LoaderCircle className="animate-spin" />
         </Button>
       );
     }
@@ -211,7 +329,8 @@ export function SwapForm({ className, ...props }: Props) {
     ) {
       return (
         <Button className="w-full" disabled>
-          Preparing swap call...
+          Preparing swap call
+          <LoaderCircle className="animate-spin" />
         </Button>
       );
     }
@@ -219,7 +338,8 @@ export function SwapForm({ className, ...props }: Props) {
     if (swap.sendTransaction.status === 'pending') {
       return (
         <Button className="w-full" disabled>
-          Swapping...
+          Swapping
+          <LoaderCircle className="animate-spin" />
         </Button>
       );
     }
@@ -234,6 +354,86 @@ export function SwapForm({ className, ...props }: Props) {
         Swap
       </Button>
     );
+  };
+
+  const renderError = () => {
+    if (!isValidSlippage(parsedSlippage)) {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Incorrect slippage</AlertTitle>
+          <AlertDescription>
+            Slippage needs to be greater than 0% and smaller or equal to 50%
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    const usedToken =
+      formState.swapKind === SwapKind.GivenIn
+        ? formState.tokenIn
+        : formState.tokenOut;
+
+    if (usedToken && swap.balance.status === 'error') {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{usedToken.symbol} balance error</AlertTitle>
+          <AlertDescription>
+            {swap.balance.error.message || 'Unable to fetch balance'}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (usedToken && swap.allowance.status === 'error') {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{usedToken.symbol} allowance error</AlertTitle>
+          <AlertDescription>
+            {swap.allowance.error.message || 'Unable to fetch allowance'}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (swap.swap.status === 'error') {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Swap preparation error</AlertTitle>
+          <AlertDescription>
+            {swap.swap.error.message || 'Unable to find swap path'}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (swap.swapCall.status === 'error') {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Swap preparation error</AlertTitle>
+          <AlertDescription>
+            {swap.swapCall.error.message || 'Unable to prepare swap call'}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (swap.prepareTransaction.status === 'error') {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Transaction preparation error</AlertTitle>
+          <AlertDescription>
+            {swap.prepareTransaction.error.message ||
+              'Unable to prepare swap transaction'}
+          </AlertDescription>
+        </Alert>
+      );
+    }
   };
 
   return (
@@ -265,70 +465,26 @@ export function SwapForm({ className, ...props }: Props) {
         <CardContent>
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="tokenIn">Sell:</Label>
+              <TokenField
+                tokenType="in"
+                swapAmount={swapAmount}
+                swap={swap}
+                formState={formState}
+                dispatch={dispatch}
+              />
 
-                <div className="flex flex-row gap-2">
-                  <Input
-                    className="grow"
-                    id="tokenIn"
-                    type="text"
-                    required
-                    value={tokenInAmount}
-                    onChange={(e) => {
-                      dispatch({
-                        type: 'ChangeTokenInAmount',
-                        payload: { amount: e.target.value },
-                      });
-                    }}
-                  />
-
-                  <TokenSelect
-                    value={formState.tokenIn?.address}
-                    chainId={formState.chainId}
-                    onValueChange={(address) =>
-                      dispatch({
-                        type: 'ChangeTokenIn',
-                        payload: { address },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="tokenOut">Buy:</Label>
-
-                <div className="flex flex-row gap-2">
-                  <Input
-                    className="grow"
-                    id="tokenOut"
-                    type="text"
-                    required
-                    value={tokenOutAmount}
-                    onChange={(e) => {
-                      dispatch({
-                        type: 'ChangeTokenOutAmount',
-                        payload: { amount: e.target.value },
-                      });
-                    }}
-                  />
-
-                  <TokenSelect
-                    value={formState.tokenOut?.address}
-                    chainId={formState.chainId}
-                    onValueChange={(address) =>
-                      dispatch({
-                        type: 'ChangeTokenOut',
-                        payload: { address },
-                      })
-                    }
-                  />
-                </div>
-              </div>
+              <TokenField
+                tokenType="out"
+                swapAmount={swapAmount}
+                swap={swap}
+                formState={formState}
+                dispatch={dispatch}
+              />
             </div>
 
             {renderSubmit()}
+
+            {renderError()}
           </div>
         </CardContent>
       </Card>

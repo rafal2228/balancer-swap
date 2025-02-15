@@ -18,7 +18,7 @@ export const useTokenAmount = ({ formState, swap, tokenType }: Props) => {
     const maybeDecimals = swap?.outputAmount?.token?.decimals;
 
     if (typeof maybeAmount !== 'bigint' || typeof maybeDecimals !== 'number') {
-      return '-';
+      return '0';
     }
 
     return formatUnits(maybeAmount, maybeDecimals);
@@ -32,7 +32,7 @@ export const useTokenAmount = ({ formState, swap, tokenType }: Props) => {
   const maybeDecimals = swap?.inputAmount?.token?.decimals;
 
   if (typeof maybeAmount !== 'bigint' || typeof maybeDecimals !== 'number') {
-    return '-';
+    return '0';
   }
 
   return formatUnits(maybeAmount, maybeDecimals);
