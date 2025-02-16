@@ -1,12 +1,8 @@
 import { SwapKind } from '@balancer/sdk';
-import { SwapFormState } from './useSwapForm';
 import { parseUnits } from 'viem';
+import { SwapFormState } from './useSwapForm';
 
-type Props = {
-  formState: SwapFormState;
-};
-
-export const useSwapAmount = ({ formState }: Props) => {
+export const parseFormAmount = (formState: SwapFormState) => {
   if (formState.swapKind === SwapKind.GivenIn) {
     if (!formState.tokenIn) {
       return 0n;

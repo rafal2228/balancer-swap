@@ -1,8 +1,8 @@
 'use client';
 import { useToast } from '@/hooks/use-toast';
+import { parseFormAmount } from '@/lib/swap/parseFormAmount';
 import { parseSlippage } from '@/lib/swap/slippage';
 import { useOnSwapSuccess, useSwap } from '@/lib/swap/useSwap';
-import { useSwapAmount } from '@/lib/swap/useSwapAmount';
 import { useSwapForm } from '@/lib/swap/useSwapForm';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader } from '@/ui/card';
@@ -22,7 +22,7 @@ export function SwapForm({ className, ...props }: Props) {
   const account = useAccount();
   const { toast } = useToast();
   const [formState, dispatch] = useSwapForm();
-  const swapAmount = useSwapAmount({ formState });
+  const swapAmount = parseFormAmount(formState);
   const parsedSlippage = parseSlippage(formState.slippage);
 
   const swap = useSwap({
