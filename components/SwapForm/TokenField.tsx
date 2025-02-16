@@ -6,7 +6,7 @@ import { Input } from '@/ui/input';
 import { SwapKind } from '@balancer/sdk';
 import { Label } from '@radix-ui/react-label';
 import { LoaderCircle } from 'lucide-react';
-import { TokenBalance } from '../TokenBalance';
+import { TokenBalance } from './TokenBalance';
 import { TokenSelect } from './TokenSelect';
 
 const useIsLoading = ({
