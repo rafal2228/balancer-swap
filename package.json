@@ -50,6 +50,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.2.0-canary.56",
     "jsdom": "^26.0.0",
+    "msw": "^2.7.0",
     "prettier": "^3.5.0",
     "tailwindcss": "^4",
     "typescript": "^5",
