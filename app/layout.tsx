@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { WalletProvider } from '@/components/WalletProvider';
+import { Toaster } from '@/ui/toaster';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -50,7 +51,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <WalletProvider>{children}</WalletProvider>
+          <WalletProvider>
+            {children}
+
+            <Toaster />
+          </WalletProvider>
         </ThemeProvider>
       </body>
     </html>

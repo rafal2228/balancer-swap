@@ -27,9 +27,7 @@ export const formatAmount = ({
       return '0';
     }
 
-    return (
-      AMOUNT_REGEX.exec(formatUnits(maybeAmount, maybeDecimals))?.at(0) ?? '0'
-    );
+    return formatUnits(maybeAmount, maybeDecimals);
   }
 
   if (formState.swapKind === SwapKind.GivenIn) {
@@ -43,7 +41,26 @@ export const formatAmount = ({
     return '0';
   }
 
-  return (
-    AMOUNT_REGEX.exec(formatUnits(maybeAmount, maybeDecimals))?.at(0) ?? '0'
-  );
+  return formatUnits(maybeAmount, maybeDecimals);
+};
+
+export const clipAmount = (amount: string) => {
+  const [integer, fraction] = amount.trim().split('.');
+
+  if (typeof fraction === 'string' && fraction.length > 0) {
+    if (fraction.length < AMOUNT_PRECISION) {
+      return `${integer}.${fraction}`;
+    }
+
+    const slice = fraction.slice(0, AMOUNT_PRECISION);
+    const isAllZeros = slice.replace(/0/g, '').length === 0;
+
+    if (isAllZeros) {
+      return `${integer}.${slice.slice(0, AMOUNT_PRECISION - 1)}1`;
+    }
+
+    return `${integer}.${slice}`;
+  }
+
+  return amount.trim();
 };

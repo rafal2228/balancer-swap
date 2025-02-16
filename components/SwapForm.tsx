@@ -1,11 +1,12 @@
 'use client';
+import { useToast } from '@/hooks/use-toast';
 import {
   isValidSlippage,
   parseSlippage,
   SLIPPAGE_REGEX,
 } from '@/lib/swap/slippage';
-import { AMOUNT_REGEX, formatAmount } from '@/lib/swap/tokenAmount';
-import { useSwap } from '@/lib/swap/useSwap';
+import { AMOUNT_REGEX, clipAmount, formatAmount } from '@/lib/swap/tokenAmount';
+import { useOnSwapSuccess, useSwap } from '@/lib/swap/useSwap';
 import { useSwapAmount } from '@/lib/swap/useSwapAmount';
 import { useSwapForm } from '@/lib/swap/useSwapForm';
 import { SupportedChainId, supportedTokens } from '@/lib/tokens';
@@ -31,7 +32,7 @@ import {
   Settings,
 } from 'lucide-react';
 import Image from 'next/image';
-import { ComponentProps } from 'react';
+import { ComponentProps, useEffect } from 'react';
 import { Address } from 'viem';
 import { arbitrum } from 'viem/chains';
 import { useAccount } from 'wagmi';
@@ -139,9 +140,7 @@ const TokenField = ({
                       ? 'ChangeTokenInAmount'
                       : 'ChangeTokenOutAmount',
                   payload: {
-                    amount:
-                      AMOUNT_REGEX.exec(e.target.value)?.at(0) ??
-                      e.target.value,
+                    amount: clipAmount(e.target.value),
                   },
                 });
               }
@@ -246,10 +245,9 @@ const SwapConfiguration = ({
 
 export function SwapForm({ className, ...props }: Props) {
   const account = useAccount();
+  const { toast } = useToast();
   const [formState, dispatch] = useSwapForm();
-
   const swapAmount = useSwapAmount({ formState });
-
   const parsedSlippage = parseSlippage(formState.slippage);
 
   const swap = useSwap({
@@ -261,6 +259,25 @@ export function SwapForm({ className, ...props }: Props) {
     swapKind: formState.swapKind,
     userAddress: account.address,
   });
+  const refreshSwap = useOnSwapSuccess();
+  const swapStatus = swap.receipt.data?.status;
+
+  useEffect(() => {
+    if (swapStatus === 'success') {
+      refreshSwap();
+      dispatch({ type: 'Reset' });
+      toast({
+        title: 'Swap success',
+      });
+    }
+
+    if (swapStatus === 'reverted') {
+      toast({
+        title: 'Swap reverted',
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swapStatus]);
 
   const renderSubmit = () => {
     if (!isValidSlippage(parsedSlippage)) {

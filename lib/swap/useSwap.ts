@@ -1,11 +1,12 @@
 import { MAX_UINT256, SwapKind, VAULT, VAULT_V3 } from '@balancer/sdk';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import invariant from 'tiny-invariant';
 import { Address, erc20Abi } from 'viem';
 import {
   usePrepareTransactionRequest,
   useReadContract,
   useSendTransaction,
+  useTransactionReceipt,
   useWriteContract,
 } from 'wagmi';
 import { SupportedChainId, SupportedToken, supportedTokens } from '../tokens';
@@ -61,6 +62,28 @@ const getVaultAddress = (
 };
 
 const MAX_BIGINT = BigInt(MAX_UINT256);
+
+export const useOnSwapSuccess = () => {
+  const queryClient = useQueryClient();
+
+  return () => {
+    queryClient.invalidateQueries({
+      predicate: (query) => {
+        const first = query.queryKey.at(0);
+        const second = query.queryKey.at(1);
+
+        return (
+          first === 'readContract' &&
+          typeof second === 'object' &&
+          second !== null &&
+          ['allowance', 'balanceOf'].includes(
+            (second as { functionName?: string })?.functionName ?? '',
+          )
+        );
+      },
+    });
+  };
+};
 
 export const useSwap = ({
   userAddress,
@@ -214,6 +237,13 @@ export const useSwap = ({
     sendTransaction.sendTransaction(prepareTransaction.data);
   };
 
+  const receipt = useTransactionReceipt({
+    hash: sendTransaction.data,
+    query: {
+      enabled: !!sendTransaction.data,
+    },
+  });
+
   return {
     tokenInAmount,
     allowance,
@@ -226,6 +256,7 @@ export const useSwap = ({
     swapEnabled,
     swapCall,
     sendTransaction,
+    receipt,
     handleApprove,
     handleSwap,
   };

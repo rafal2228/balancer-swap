@@ -43,6 +43,10 @@ type ChangeSlippage = {
   };
 };
 
+type Reset = {
+  type: 'Reset';
+};
+
 export type SwapFormState = {
   amount: string;
   slippage: string;
@@ -58,7 +62,8 @@ type Action =
   | SwitchTokens
   | ChangeTokenInAmount
   | ChangeTokenOutAmount
-  | ChangeSlippage;
+  | ChangeSlippage
+  | Reset;
 
 const swapReducer = (state: SwapFormState, action: Action): SwapFormState => {
   switch (action.type) {
@@ -135,6 +140,13 @@ const swapReducer = (state: SwapFormState, action: Action): SwapFormState => {
       return {
         ...state,
         slippage: action.payload.slippage,
+      };
+    }
+    case 'Reset': {
+      return {
+        ...defaultState,
+        chainId: state.chainId,
+        slippage: state.slippage,
       };
     }
     default:
