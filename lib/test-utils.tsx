@@ -1,3 +1,4 @@
+import { Toaster } from '@/ui/toaster';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -42,7 +43,11 @@ const Providers = ({ children }: PropsWithChildren) => {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>{children}</RainbowKitProvider>
+        <RainbowKitProvider>
+          {children}
+
+          <Toaster />
+        </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
