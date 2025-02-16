@@ -1,6 +1,6 @@
 import { Footer } from '@/components/Footer';
 import { Logo } from '@/components/Logo';
-import { SwapForm } from '@/components/SwapForm';
+import { SwapForm } from '@/components/SwapForm/SwapForm';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 
