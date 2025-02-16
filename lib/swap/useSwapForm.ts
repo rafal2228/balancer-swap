@@ -154,7 +154,7 @@ const swapReducer = (state: SwapFormState, action: Action): SwapFormState => {
   }
 };
 
-const defaultState: SwapFormState = {
+export const defaultState: SwapFormState = {
   amount: '0',
   slippage: '0.5',
   tokenIn: supportedTokens[arbitrum.id][0],
