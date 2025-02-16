@@ -1,8 +1,8 @@
 import { SwapKind } from '@balancer/sdk';
 import { act, renderHook } from '@testing-library/react';
+import { zeroAddress } from 'viem';
 import { describe, expect, it } from 'vitest';
 import { useSwapForm } from './useSwapForm';
-import { zeroAddress } from 'viem';
 
 describe('useSwapForm', () => {
   it('should unset token out when token in is changed to the same token', () => {
@@ -14,7 +14,7 @@ describe('useSwapForm', () => {
       result.current[1]({
         type: 'ChangeTokenIn',
         payload: {
-          address: result.current[0].tokenOut?.address!,
+          address: result.current[0].tokenOut?.address ?? zeroAddress,
         },
       });
     });
@@ -48,7 +48,7 @@ describe('useSwapForm', () => {
       result.current[1]({
         type: 'ChangeTokenOut',
         payload: {
-          address: result.current[0].tokenIn?.address!,
+          address: result.current[0].tokenIn?.address ?? zeroAddress,
         },
       });
     });
