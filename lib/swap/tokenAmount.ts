@@ -2,13 +2,19 @@ import { Swap, SwapKind } from '@balancer/sdk';
 import { formatUnits } from 'viem';
 import { SwapFormState } from './useSwapForm';
 
-type Props = {
+const AMOUNT_PRECISION = 6;
+
+export const AMOUNT_REGEX = new RegExp(`^\\d*\\.?\\d{0,${AMOUNT_PRECISION}}`);
+
+export const formatAmount = ({
+  formState,
+  swap,
+  tokenType,
+}: {
   formState: SwapFormState;
   swap: Swap | undefined;
   tokenType: 'in' | 'out';
-};
-
-export const useTokenAmount = ({ formState, swap, tokenType }: Props) => {
+}) => {
   if (tokenType === 'out') {
     if (formState.swapKind === SwapKind.GivenOut) {
       return formState.amount;
@@ -21,7 +27,9 @@ export const useTokenAmount = ({ formState, swap, tokenType }: Props) => {
       return '0';
     }
 
-    return formatUnits(maybeAmount, maybeDecimals);
+    return (
+      AMOUNT_REGEX.exec(formatUnits(maybeAmount, maybeDecimals))?.at(0) ?? '0'
+    );
   }
 
   if (formState.swapKind === SwapKind.GivenIn) {
@@ -35,5 +43,7 @@ export const useTokenAmount = ({ formState, swap, tokenType }: Props) => {
     return '0';
   }
 
-  return formatUnits(maybeAmount, maybeDecimals);
+  return (
+    AMOUNT_REGEX.exec(formatUnits(maybeAmount, maybeDecimals))?.at(0) ?? '0'
+  );
 };

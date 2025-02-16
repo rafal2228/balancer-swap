@@ -96,7 +96,9 @@ export const useSwap = ({
     },
   });
 
-  const tokenInAmount = swap.data?.inputAmount.amount;
+  // We need to check swap kind - for givenIn the swap object does not contain correct inputAmount.amount value
+  const tokenInAmount =
+    swapKind === SwapKind.GivenIn ? amount : swap.data?.inputAmount.amount;
 
   const balance = useReadContract({
     abi: erc20Abi,
@@ -158,8 +160,9 @@ export const useSwap = ({
   const swapCallEnabled =
     swapEnabled &&
     swap.status === 'success' &&
+    typeof tokenInAmount === 'bigint' &&
     balance.status === 'success' &&
-    balance.data >= amount &&
+    balance.data >= tokenInAmount &&
     allowance.status === 'success' &&
     !requiresApproval &&
     isValidSlippage(slippage);

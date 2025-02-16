@@ -48,7 +48,7 @@ export const prepareSwap = async (config: {
       swapAmount.token.decimals,
     ).split('.');
 
-    if (fraction.length > 0) {
+    if (typeof fraction === 'string' && fraction.length > 0) {
       return `${integer}.${fraction.slice(0, decimals)}`;
     }
 

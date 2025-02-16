@@ -4,10 +4,10 @@ import {
   parseSlippage,
   SLIPPAGE_REGEX,
 } from '@/lib/swap/slippage';
+import { AMOUNT_REGEX, formatAmount } from '@/lib/swap/tokenAmount';
 import { useSwap } from '@/lib/swap/useSwap';
 import { useSwapAmount } from '@/lib/swap/useSwapAmount';
 import { useSwapForm } from '@/lib/swap/useSwapForm';
-import { useTokenAmount } from '@/lib/swap/useTokenAmount';
 import { SupportedChainId, supportedTokens } from '@/lib/tokens';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { Button } from '@/ui/button';
@@ -88,7 +88,7 @@ const TokenField = ({
   formState: ReturnType<typeof useSwapForm>[0];
   dispatch: ReturnType<typeof useSwapForm>[1];
 }) => {
-  const amount = useTokenAmount({
+  const amount = formatAmount({
     formState,
     swap: swap.swap.data,
     tokenType,
@@ -132,13 +132,19 @@ const TokenField = ({
             disabled={isLoading}
             value={amount}
             onChange={(e) => {
-              dispatch({
-                type:
-                  tokenType === 'in'
-                    ? 'ChangeTokenInAmount'
-                    : 'ChangeTokenOutAmount',
-                payload: { amount: e.target.value },
-              });
+              if (AMOUNT_REGEX.test(e.target.value)) {
+                dispatch({
+                  type:
+                    tokenType === 'in'
+                      ? 'ChangeTokenInAmount'
+                      : 'ChangeTokenOutAmount',
+                  payload: {
+                    amount:
+                      AMOUNT_REGEX.exec(e.target.value)?.at(0) ??
+                      e.target.value,
+                  },
+                });
+              }
             }}
           />
 
