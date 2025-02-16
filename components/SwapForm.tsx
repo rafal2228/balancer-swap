@@ -35,7 +35,7 @@ import Image from 'next/image';
 import { ComponentProps, useEffect } from 'react';
 import { Address } from 'viem';
 import { arbitrum } from 'viem/chains';
-import { useAccount } from 'wagmi';
+import { useAccount, useSwitchChain } from 'wagmi';
 import { TokenBalance } from './TokenBalance';
 
 type Props = Omit<ComponentProps<'div'>, 'children'>;
@@ -249,6 +249,7 @@ export function SwapForm({ className, ...props }: Props) {
   const [formState, dispatch] = useSwapForm();
   const swapAmount = useSwapAmount({ formState });
   const parsedSlippage = parseSlippage(formState.slippage);
+  const switchChain = useSwitchChain();
 
   const swap = useSwap({
     slippage: parsedSlippage,
@@ -296,6 +297,19 @@ export function SwapForm({ className, ...props }: Props) {
       );
     }
 
+    if (formState.chainId !== account.chainId) {
+      return (
+        <Button
+          className="w-full"
+          onClick={() =>
+            switchChain.switchChain({ chainId: formState.chainId })
+          }
+        >
+          Switch network
+        </Button>
+      );
+    }
+
     if (!formState.tokenIn || !formState.tokenOut) {
       return (
         <Button className="w-full" disabled>
@@ -334,7 +348,11 @@ export function SwapForm({ className, ...props }: Props) {
     }
 
     if (swapAmount === 0n) {
-      return <Button className="w-full">Swap</Button>;
+      return (
+        <Button className="w-full" disabled>
+          Fill the form to swap
+        </Button>
+      );
     }
 
     if (swap.swap.status === 'pending') {
